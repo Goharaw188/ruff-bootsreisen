@@ -13,6 +13,14 @@ const nextConfig = {
       },
     ],
   },
+  eslint: {
+    // Ignore ESLint errors during build (we handle them in CI/linting separately)
+    ignoreDuringBuilds: false,
+  },
+  typescript: {
+    // Ignore TypeScript errors during build
+    ignoreBuildErrors: false,
+  },
 };
 
 module.exports = nextConfig;
