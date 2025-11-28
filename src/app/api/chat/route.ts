@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
     };
 
     // Try to extract message from different possible response formats
-    if (data.output) {
+    // n8n workflow returns { chatMessage: "..." } from JavaScript1 node
+    if (data.chatMessage) {
+      parsedResponse.message = data.chatMessage;
+      parsedResponse.text = data.chatMessage;
+    } else if (data.output) {
       // If n8n returns { output: "message" }
       parsedResponse.message = data.output;
       parsedResponse.text = data.output;
@@ -68,6 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Try to extract boat results if available
+    // Check for availabilities in the response
     if (data.availabilities && Array.isArray(data.availabilities)) {
       parsedResponse.boatResults = data.availabilities.map((boat: any) => ({
         boatName: boat.boatName || boat.name,
@@ -80,6 +85,25 @@ export async function POST(request: NextRequest) {
         maxGuests: boat.maxGuests || boat.nbpersonnesmax || 0,
         cabins: boat.cabins || boat.cabines || '',
       }));
+    }
+    
+    // Also check if the response is wrapped in a json property (n8n webhook response format)
+    if (data.json && data.json.chatMessage) {
+      parsedResponse.message = data.json.chatMessage;
+      parsedResponse.text = data.json.chatMessage;
+      if (data.json.availabilities && Array.isArray(data.json.availabilities)) {
+        parsedResponse.boatResults = data.json.availabilities.map((boat: any) => ({
+          boatName: boat.boatName || boat.name,
+          departurePort: boat.departurePort || boat.port,
+          startDate: boat.startDate || boat.dateDepart,
+          endDate: boat.endDate || boat.dateArrivee,
+          priceGross: boat.priceGross || boat.prix || 0,
+          priceNet: boat.priceNet || boat.prixLocationRemise || boat.priceGross || 0,
+          discount: (boat.priceGross || 0) - (boat.priceNet || boat.prixLocationRemise || boat.priceGross || 0),
+          maxGuests: boat.maxGuests || boat.nbpersonnesmax || 0,
+          cabins: boat.cabins || boat.cabines || '',
+        }));
+      }
     }
 
     return NextResponse.json(parsedResponse);
